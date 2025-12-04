@@ -54,7 +54,7 @@ const expectEqual = std.testing.expectEqual;
 
 pub fn main() !void {
     const results = try day01(data);
-    print("Answer is {}", .{results});
+    print("Answer is {}\n", .{results});
 }
 
 fn day01(input: []const u8) !struct { stage1: usize, stage2: usize } {
@@ -66,8 +66,8 @@ fn day01(input: []const u8) !struct { stage1: usize, stage2: usize } {
 
     while (line_iterator.next()) |line| {
         const clicks = switch (line[0]) {
-            'L' => -try std.fmt.parseInt(isize, line[1..], 10),
-            'R' => try std.fmt.parseInt(isize, line[1..], 10),
+            'L' => -try parseInt(isize, line[1..], 10),
+            'R' => try parseInt(isize, line[1..], 10),
             else => return error.InvalidCharacter,
         };
         counter_stage2 += @abs(@divFloor(dial + clicks, 100));
