@@ -58,32 +58,32 @@ pub fn main() !void {
 }
 
 fn day01(input: []const u8) !struct { stage1: usize, stage2: usize } {
-    var line_iterator = tokenizeSeq(u8, input, "\n");
+    var lineIterator = tokenizeSeq(u8, input, "\n");
 
     var dial: isize = 50;
-    var counter_stage1: usize = 0;
-    var counter_stage2: usize = 0;
+    var counterStage1: usize = 0;
+    var counterStage2: usize = 0;
 
-    while (line_iterator.next()) |line| {
+    while (lineIterator.next()) |line| {
         const clicks = switch (line[0]) {
             'L' => -try parseInt(isize, line[1..], 10),
             'R' => try parseInt(isize, line[1..], 10),
             else => return error.InvalidCharacter,
         };
-        counter_stage2 += @abs(@divFloor(dial + clicks, 100));
+        counterStage2 += @abs(@divFloor(dial + clicks, 100));
         if (dial == 0 and clicks < 0) {
-            counter_stage2 -= 1;
+            counterStage2 -= 1;
         }
         dial = @mod(dial + clicks, 100);
         if (dial == 0) {
-            counter_stage1 += 1;
+            counterStage1 += 1;
         }
         if (dial == 0 and clicks < 0) {
-            counter_stage2 += 1;
+            counterStage2 += 1;
         }
     }
 
-    return .{ .stage1 = counter_stage1, .stage2 = counter_stage2 };
+    return .{ .stage1 = counterStage1, .stage2 = counterStage2 };
 }
 
 test "example data" {
