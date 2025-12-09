@@ -1,6 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const List = std.ArrayList;
+const List = std.array_list.Managed;
 const Map = std.AutoHashMap;
 const StrMap = std.StringHashMap;
 const BitSet = std.DynamicBitSet;
