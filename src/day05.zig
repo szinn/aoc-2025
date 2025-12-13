@@ -84,7 +84,6 @@ fn day05(input: []const u8) !struct { usize, usize } {
         }
     }
     // print("Done ranges\n", .{});
-    std.mem.sort(Range, ranges.items[0..], {}, cmpByLower);
     for (0..ranges.items.len) |i| {
         countStage2 += ranges.items[i].high - ranges.items[i].low + 1;
         // print("{} {}\n", .{ ranges.items[i], ranges.items[i].high - ranges.items[i].low + 1 });
