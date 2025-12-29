@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const Allocator = std.mem.Allocator;
-const HashMap = std.AutoArrayHashMapUnmanaged;
+const HashMap = std.array_hash_map.AutoArrayHashMap;
 const List = std.array_list.Managed;
 
 const print = std.debug.print;
