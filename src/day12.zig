@@ -1,38 +1,13 @@
 const std = @import("std");
+
 const Allocator = std.mem.Allocator;
+const HashMap = std.AutoArrayHashMapUnmanaged;
 const List = std.array_list.Managed;
-const Map = std.AutoHashMap;
-const StrMap = std.StringHashMap;
-const BitSet = std.DynamicBitSet;
-
-const util = @import("util.zig");
-const gpa = util.gpa;
-
-const data = @embedFile("data/day12.txt");
-
-// Useful stdlib functions
-const tokenizeAny = std.mem.tokenizeAny;
-const tokenizeSeq = std.mem.tokenizeSequence;
-const tokenizeSca = std.mem.tokenizeScalar;
-const splitAny = std.mem.splitAny;
-const splitSeq = std.mem.splitSequence;
-const splitSca = std.mem.splitScalar;
-const indexOf = std.mem.indexOfScalar;
-const indexOfAny = std.mem.indexOfAny;
-const indexOfStr = std.mem.indexOfPosLinear;
-const lastIndexOf = std.mem.lastIndexOfScalar;
-const lastIndexOfAny = std.mem.lastIndexOfAny;
-const lastIndexOfStr = std.mem.lastIndexOfLinear;
-const trim = std.mem.trim;
-const sliceMin = std.mem.min;
-const sliceMax = std.mem.max;
-
-const parseInt = std.fmt.parseInt;
-const parseFloat = std.fmt.parseFloat;
 
 const print = std.debug.print;
 const assert = std.debug.assert;
-
+const splitScalar = std.mem.splitScalar;
+const parseInt = std.fmt.parseInt;
 const sort = std.sort.block;
 const asc = std.sort.asc;
 const desc = std.sort.desc;
@@ -40,7 +15,33 @@ const desc = std.sort.desc;
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
-pub fn main() !void {}
+const data = @embedFile("data/day12.txt");
+const sampleData =
+    \\
+;
+
+// pub fn main() !void {
+//     var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
+//     defer assert(debugAllocator.deinit() == .ok);
+//
+//     const result = try day12(debugAllocator.allocator(), data);
+//
+//     print("Result = {}\n", .{result});
+// }
+//
+// fn day12(allocator: Allocator, input: []const u8) !struct {} {
+//     var arenaAllocator: std.heap.ArenaAllocator = .init(allocator);
+//     defer arenaAllocator.deinit();
+//     const arena = arenaAllocator.allocator();
+//
+//     return .{};
+// }
+//
+// test "Sample data" {
+//     const allocator = std.testing.allocator;
+//
+//     expectEqual(.{}, try day12(allocator, sampleData));
+// }
 
 // Generated from template/template.zig.
 // Run `zig build generate` to update.
