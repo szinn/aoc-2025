@@ -1,12 +1,19 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
-const List = std.array_list.Managed;
-const Map = std.AutoHashMap;
-const StrMap = std.StringHashMap;
-const BitSet = std.DynamicBitSet;
 
-const util = @import("util.zig");
-const gpa = util.gpa;
+const Allocator = std.mem.Allocator;
+const HashMap = std.array_hash_map.AutoArrayHashMap;
+const List = std.array_list.Managed;
+
+const print = std.debug.print;
+const assert = std.debug.assert;
+const splitScalar = std.mem.splitScalar;
+const parseInt = std.fmt.parseInt;
+const sort = std.sort.block;
+const asc = std.sort.asc;
+const desc = std.sort.desc;
+
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
 
 const data = @embedFile("data/day08.txt");
 const dataSample =
@@ -32,36 +39,6 @@ const dataSample =
     \\425,690,689
 ;
 
-// Useful stdlib functions
-const tokenizeAny = std.mem.tokenizeAny;
-const tokenizeSeq = std.mem.tokenizeSequence;
-const tokenizeSca = std.mem.tokenizeScalar;
-const splitAny = std.mem.splitAny;
-const splitSeq = std.mem.splitSequence;
-const splitSca = std.mem.splitScalar;
-const indexOf = std.mem.indexOfScalar;
-const indexOfAny = std.mem.indexOfAny;
-const indexOfStr = std.mem.indexOfPosLinear;
-const lastIndexOf = std.mem.lastIndexOfScalar;
-const lastIndexOfAny = std.mem.lastIndexOfAny;
-const lastIndexOfStr = std.mem.lastIndexOfLinear;
-const trim = std.mem.trim;
-const sliceMin = std.mem.min;
-const sliceMax = std.mem.max;
-
-const parseInt = std.fmt.parseInt;
-const parseFloat = std.fmt.parseFloat;
-
-const print = std.debug.print;
-const assert = std.debug.assert;
-
-const sort = std.sort.block;
-const asc = std.sort.asc;
-const desc = std.sort.desc;
-
-const expect = std.testing.expect;
-const expectEqual = std.testing.expectEqual;
-
 const Point = struct {
     x: isize,
     y: isize,
@@ -75,151 +52,135 @@ const Point = struct {
     }
 };
 
+const Circuit = HashMap(*Point, void);
+const Circuits = HashMap(*Circuit, void);
+const PointToCircuit = HashMap(usize, *Circuit);
+
+const Pair = struct {
+    a: *Point,
+    b: *Point,
+    distance: isize,
+
+    fn distanceLessThan(_: void, b: Pair, a: Pair) bool {
+        return a.distance < b.distance;
+    }
+};
+
 pub fn main() !void {
-    const results = try day08(data, 1000);
+    var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
+    defer assert(debugAllocator.deinit() == .ok);
+
+    const results = try day08(debugAllocator.allocator(), data, 1000);
 
     print("Answer: {}\n", .{results});
 }
 
-fn day08(input: []const u8, circuitCount: usize) !struct { usize, isize } {
-    var pointData: List(Point) = .init(gpa);
-    defer pointData.deinit();
-    try readPoints(&pointData, input);
-    const points: []Point = pointData.items;
-    const pointCount: usize = points.len;
+fn day08(allocator: Allocator, input: []const u8, circuitCount: usize) !struct { usize, isize } {
+    var arenaAllocator: std.heap.ArenaAllocator = .init(allocator);
+    defer arenaAllocator.deinit();
+    const arena = arenaAllocator.allocator();
 
-    var circuitId: []usize = try gpa.alloc(usize, pointCount);
-    defer gpa.free(circuitId);
-    for (0..pointCount) |i| circuitId[i] = i;
+    var points: List(*Point) = try loadPoints(arena, input);
+    defer points.deinit();
 
-    const circuitCounts: []usize = try gpa.alloc(usize, pointCount);
-    defer {
-        gpa.free(circuitCounts);
-    }
-    for (0..pointCount) |i| circuitCounts[i] = 1;
+    var pairs = try createPairs(arena, points);
+    defer pairs.deinit();
 
-    var connected: List([]bool) = .init(gpa);
-    for (0..pointCount) |_| {
-        const row: []bool = try gpa.alloc(bool, pointCount);
-        for (0..pointCount) |i| row[i] = false;
-        try connected.append(row);
-    }
-    defer {
-        for (connected.items) |row| gpa.free(row);
-        connected.deinit();
+    var circuits: Circuits = .init(arena);
+    var pointsToCircuitMap: PointToCircuit = .init(arena);
+    for (points.items) |point| {
+        const circuit = try arena.create(Circuit);
+        circuit.* = .init(arena);
+        try circuit.put(point, {});
+        try circuits.put(circuit, {});
+        try pointsToCircuitMap.put(@intFromPtr(point), circuit);
     }
 
-    var countStage1: usize = 1;
-    var circuit: usize = 0;
-    var stage2Product: isize = undefined;
-    while (true) {
-        const nextClosest = getNextShortestDistance(pointCount, points, &connected);
-        const pointA = nextClosest.pointA;
-        const pointB = nextClosest.pointB;
-        const distance = nextClosest.distance;
-
-        if (distance == std.math.maxInt(isize)) break;
-
-        // print("Shortest path {} is from {} to {}\n", .{ circuit, points[pointA], points[pointB] });
-
-        connected.items[pointA][pointB] = true;
-        if (circuitId[pointA] != circuitId[pointB]) {
-            try combineCircuits(pointCount, circuitId, circuitCounts, pointA, pointB);
-            stage2Product = points[pointA].x * points[pointB].x;
-        }
-
-        if (circuit == circuitCount - 1) {
-            var counts: []usize = try gpa.alloc(usize, pointCount);
-            defer gpa.free(counts);
-            @memcpy(counts, circuitCounts[0..pointCount]);
-            sort(usize, counts[0..pointCount], {}, std.sort.desc(usize));
-
-            for (0..3) |i| {
-                if (counts[i] != 0) countStage1 *= counts[i];
-            }
-        }
-        if (circuitSetCount(pointCount, circuitCounts) == 1) break;
-
-        circuit += 1;
+    for (0..circuitCount) |_| {
+        _ = try joinClosestPair(arena, &pairs, &circuits, &pointsToCircuitMap);
     }
 
-    return .{ countStage1, stage2Product };
+    var circuitSizes: List(usize) = .init(arena);
+    for (circuits.keys()) |circuit| {
+        try circuitSizes.append(circuit.keys().len);
+    }
+    sort(usize, circuitSizes.items, {}, std.sort.desc(usize));
+
+    var finalPair: ?Pair = null;
+    while (circuits.keys().len > 1) {
+        finalPair = try joinClosestPair(arena, &pairs, &circuits, &pointsToCircuitMap);
+    }
+
+    var stage1: usize = 1;
+    for (0..3) |i| stage1 *= circuitSizes.items[i];
+
+    const stage2: isize = if (finalPair) |pair| pair.a.x * pair.b.x else 0;
+
+    return .{ stage1, stage2 };
 }
 
-fn circuitSetCount(pointCount: usize, circuits: []usize) usize {
-    var count: usize = 0;
-    for (0..pointCount) |i| {
-        if (circuits[i] > 0) count += 1;
-    }
+fn loadPoints(allocator: Allocator, input: []const u8) !List(*Point) {
+    var points: List(*Point) = .init(allocator);
 
-    return count;
+    var lineIterator = splitScalar(u8, input, '\n');
+    while (lineIterator.next()) |line| if (line.len > 0) {
+        var parts = splitScalar(u8, line, ',');
+        const point = try allocator.create(Point);
+        point.* = .{
+            .x = try parseInt(isize, parts.next().?, 10),
+            .y = try parseInt(isize, parts.next().?, 10),
+            .z = try parseInt(isize, parts.next().?, 10),
+        };
+        try points.append(point);
+    };
+
+    return points;
 }
 
-fn getNextShortestDistance(pointCount: usize, points: []Point, connected: *List([]bool)) struct { pointA: usize, pointB: usize, distance: isize } {
-    var pointA: usize = undefined;
-    var pointB: usize = undefined;
-    var distance: isize = std.math.maxInt(isize);
+fn createPairs(allocator: Allocator, points: List(*Point)) !List(Pair) {
+    const pointCount = points.items.len;
+    const pairCount = pointCount * (pointCount - 1) / 2;
 
-    for (0..pointCount) |i| {
-        for (0..pointCount) |j| {
-            if (i == j) continue;
-            if (connected.items[i][j] or connected.items[j][i]) continue;
+    var pairs: List(Pair) = try .initCapacity(allocator, pairCount);
+    for (0..pointCount) |i| for (i + 1..pointCount) |j| {
+        const a = points.items[i];
+        const b = points.items[j];
+        pairs.appendAssumeCapacity(.{
+            .a = a,
+            .b = b,
+            .distance = a.distance(b),
+        });
+    };
+    sort(Pair, pairs.items, {}, Pair.distanceLessThan);
 
-            const currentDistance = points[i].distance(&points[j]);
-
-            if (currentDistance < distance) {
-                pointA = i;
-                pointB = j;
-                distance = currentDistance;
-            }
-        }
-    }
-
-    return .{ .pointA = pointA, .pointB = pointB, .distance = distance };
+    return pairs;
 }
 
-fn combineCircuits(pointCount: usize, circuits: []usize, circuitCounts: []usize, pointA: usize, pointB: usize) !void {
-    const circuitA = circuits[pointA];
-    const circuitB = circuits[pointB];
-    if (circuitA == circuitB) return;
+fn joinClosestPair(allocator: Allocator, pairs: *List(Pair), circuits: *Circuits, pointsToCircuitMap: *PointToCircuit) !?Pair {
+    const pair = pairs.pop().?;
+    const aCircuit = pointsToCircuitMap.get(@intFromPtr(pair.a)).?;
+    const bCircuit = pointsToCircuitMap.get(@intFromPtr(pair.b)).?;
 
-    if (circuitA < circuitB) {
-        // print("  Moving circuit {} to {} ({} and {})\n", .{ circuitB, circuitA, circuitCounts[circuitB], circuitCounts[circuitA] });
-        try moveCircuit(pointCount, circuits, circuitB, circuitA);
-        circuitCounts[circuitA] += circuitCounts[circuitB];
-        circuitCounts[circuitB] = 0;
-    } else {
-        // print("  Moving circuit {} to {} ({} and {})\n", .{ circuitA, circuitB, circuitCounts[circuitA], circuitCounts[circuitB] });
-        try moveCircuit(pointCount, circuits, circuitA, circuitB);
-        circuitCounts[circuitB] += circuitCounts[circuitA];
-        circuitCounts[circuitA] = 0;
-    }
-}
+    if (aCircuit == bCircuit) return null;
 
-fn moveCircuit(pointCount: usize, circuits: []usize, from: usize, to: usize) !void {
-    for (0..pointCount) |i| {
-        if (circuits[i] == from) {
-            circuits[i] = to;
-        }
-    }
-}
+    const newCircuit = try allocator.create(Circuit);
+    newCircuit.* = .init(allocator);
+    try newCircuit.ensureTotalCapacity(aCircuit.keys().len + bCircuit.keys().len);
 
-fn readPoints(points: *List(Point), input: []const u8) !void {
-    var lineIterator = splitSeq(u8, input, "\n");
-    while (lineIterator.next()) |line| {
-        if (line.len == 0) break;
-        if (indexOf(u8, line, ',')) |yOffset| {
-            if (lastIndexOf(u8, line, ',')) |zOffset| {
-                const x = try parseInt(isize, line[0..yOffset], 10);
-                const y = try parseInt(isize, line[yOffset + 1 .. zOffset], 10);
-                const z = try parseInt(isize, line[zOffset + 1 ..], 10);
+    for (aCircuit.keys()) |point| newCircuit.putAssumeCapacity(point, {});
+    for (bCircuit.keys()) |point| newCircuit.putAssumeCapacity(point, {});
 
-                try points.append(Point{ .x = x, .y = y, .z = z });
-            }
-        }
-    }
+    _ = circuits.orderedRemove(aCircuit);
+    _ = circuits.orderedRemove(bCircuit);
+    try circuits.put(newCircuit, {});
+
+    for (newCircuit.keys()) |point| pointsToCircuitMap.putAssumeCapacity(@intFromPtr(point), newCircuit);
+
+    return pair;
 }
 
 test "Sample data" {
-    try expectEqual(.{ 40, 25272 }, day08(dataSample, 10));
+    const allocator = std.testing.allocator;
+
+    try expectEqual(.{ 40, 25272 }, day08(allocator, dataSample, 10));
 }
