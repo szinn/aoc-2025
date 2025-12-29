@@ -77,14 +77,11 @@ pub fn main() !void {
 
 fn day08(allocator: Allocator, input: []const u8, circuitCount: usize) !struct { usize, isize } {
     var arenaAllocator: std.heap.ArenaAllocator = .init(allocator);
-    defer arenaAllocator.deinit();
     const arena = arenaAllocator.allocator();
+    defer arenaAllocator.deinit();
 
-    var points: List(*Point) = try loadPoints(arena, input);
-    defer points.deinit();
-
+    const points: List(*Point) = try loadPoints(arena, input);
     var pairs = try createPairs(arena, points);
-    defer pairs.deinit();
 
     var circuits: Circuits = .init(arena);
     var pointsToCircuitMap: PointToCircuit = .init(arena);
@@ -97,7 +94,7 @@ fn day08(allocator: Allocator, input: []const u8, circuitCount: usize) !struct {
     }
 
     for (0..circuitCount) |_| {
-        _ = try joinClosestPair(arena, &pairs, &circuits, &pointsToCircuitMap);
+        _ = try joinClosestPair(&pairs, &circuits, &pointsToCircuitMap);
     }
 
     var circuitSizes: List(usize) = .init(arena);
@@ -108,7 +105,7 @@ fn day08(allocator: Allocator, input: []const u8, circuitCount: usize) !struct {
 
     var finalPair: ?Pair = null;
     while (circuits.keys().len > 1) {
-        finalPair = try joinClosestPair(arena, &pairs, &circuits, &pointsToCircuitMap);
+        finalPair = try joinClosestPair(&pairs, &circuits, &pointsToCircuitMap);
     }
 
     var stage1: usize = 1;
@@ -156,25 +153,20 @@ fn createPairs(allocator: Allocator, points: List(*Point)) !List(Pair) {
     return pairs;
 }
 
-fn joinClosestPair(allocator: Allocator, pairs: *List(Pair), circuits: *Circuits, pointsToCircuitMap: *PointToCircuit) !?Pair {
+fn joinClosestPair(pairs: *List(Pair), circuits: *Circuits, pointsToCircuitMap: *PointToCircuit) !?Pair {
     const pair = pairs.pop().?;
     const aCircuit = pointsToCircuitMap.get(@intFromPtr(pair.a)).?;
     const bCircuit = pointsToCircuitMap.get(@intFromPtr(pair.b)).?;
 
     if (aCircuit == bCircuit) return null;
 
-    const newCircuit = try allocator.create(Circuit);
-    newCircuit.* = .init(allocator);
-    try newCircuit.ensureTotalCapacity(aCircuit.keys().len + bCircuit.keys().len);
+    try aCircuit.ensureUnusedCapacity(bCircuit.keys().len);
+    for (bCircuit.keys()) |point| {
+        aCircuit.putAssumeCapacity(point, {});
+        pointsToCircuitMap.putAssumeCapacity(@intFromPtr(point), aCircuit);
+    }
 
-    for (aCircuit.keys()) |point| newCircuit.putAssumeCapacity(point, {});
-    for (bCircuit.keys()) |point| newCircuit.putAssumeCapacity(point, {});
-
-    _ = circuits.orderedRemove(aCircuit);
     _ = circuits.orderedRemove(bCircuit);
-    try circuits.put(newCircuit, {});
-
-    for (newCircuit.keys()) |point| pointsToCircuitMap.putAssumeCapacity(@intFromPtr(point), newCircuit);
 
     return pair;
 }
