@@ -40,7 +40,7 @@ const sampleData =
 // test "Sample data" {
 //     const allocator = std.testing.allocator;
 //
-//     expectEqual(.{}, try day20(allocator, sampleData));
+//     try expectEqual(.{}, try day20(allocator, sampleData));
 // }
 
 // Generated from template/template.zig.
