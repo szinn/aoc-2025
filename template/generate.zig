@@ -6,6 +6,8 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const Hash = std.crypto.hash.Md5;
 const hashes_file = "template/hashes.bin";
 
+const dayCount: usize = 12;
+
 fn instantiateTemplate(template: []const u8, day: u32) ![]const u8 {
     var list = std.array_list.Managed(u8).init(gpa.allocator());
     errdefer list.deinit();
@@ -21,14 +23,14 @@ fn instantiateTemplate(template: []const u8, day: u32) ![]const u8 {
     return list.toOwnedSlice();
 }
 
-fn readHashes() !*[25][Hash.digest_length]u8 {
-    const hash_bytes = std.fs.cwd().readFileAlloc(gpa.allocator(), hashes_file, 25 * Hash.digest_length) catch |err| switch (err) {
+fn readHashes() !*[dayCount][Hash.digest_length]u8 {
+    const hash_bytes = std.fs.cwd().readFileAlloc(gpa.allocator(), hashes_file, dayCount * Hash.digest_length) catch |err| switch (err) {
         error.FileTooBig => return error.InvalidFormat,
         else => |e| return e,
     };
     errdefer gpa.allocator().free(hash_bytes);
 
-    if (hash_bytes.len != 25 * Hash.digest_length)
+    if (hash_bytes.len != dayCount * Hash.digest_length)
         return error.InvalidFormat;
 
     return @ptrCast(hash_bytes.ptr);
@@ -37,10 +39,10 @@ fn readHashes() !*[25][Hash.digest_length]u8 {
 pub fn main() !void {
     const template = try std.fs.cwd().readFileAlloc(gpa.allocator(), "template/template.zig", max_size);
 
-    const hashes: *[25][Hash.digest_length]u8 = readHashes() catch |err| switch (err) {
+    const hashes: *[dayCount][Hash.digest_length]u8 = readHashes() catch |err| switch (err) {
         error.FileNotFound => blk: {
             std.debug.print("{s} doesn't exist, will assume all files have been modified.\nDelete src/dayXX.zig and rerun `zig build generate` to regenerate it.\n", .{hashes_file});
-            const mem = try gpa.allocator().create([25][Hash.digest_length]u8);
+            const mem = try gpa.allocator().create([dayCount][Hash.digest_length]u8);
             @memset(std.mem.sliceAsBytes(mem), 0);
             break :blk mem;
         },
@@ -57,7 +59,7 @@ pub fn main() !void {
     var skipped_any = false;
     var updated_hashes = false;
     var day: u32 = 1;
-    while (day <= 25) : (day += 1) {
+    while (day <= dayCount) : (day += 1) {
         const filename = try std.fmt.allocPrint(gpa.allocator(), "src/day{d:0>2}.zig", .{day});
         defer gpa.allocator().free(filename);
 
