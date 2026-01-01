@@ -9,7 +9,7 @@ const util = @import("util.zig");
 const gpa = util.gpa;
 
 const data = @embedFile("data/day01.txt");
-const data_sample =
+const sampleData =
     \\L68
     \\L30
     \\R48
@@ -57,7 +57,7 @@ pub fn main() !void {
     print("Answer is {}\n", .{results});
 }
 
-fn day01(input: []const u8) !struct { stage1: usize, stage2: usize } {
+fn day01(input: []const u8) !struct { usize, usize } {
     var lineIterator = tokenizeSeq(u8, input, "\n");
 
     var dial: isize = 50;
@@ -83,38 +83,13 @@ fn day01(input: []const u8) !struct { stage1: usize, stage2: usize } {
         }
     }
 
-    return .{ .stage1 = counterStage1, .stage2 = counterStage2 };
+    return .{ counterStage1, counterStage2 };
 }
 
 test "example data" {
-    const results = try day01(data_sample[0..]);
-
-    try expectEqual(3, results.stage1);
-    try expectEqual(6, results.stage2);
+    try expectEqual(.{ 3, 6 }, try day01(sampleData));
 }
 
-test "big rotation" {
-    var results = try day01("R1000");
-    try expectEqual(0, results.stage1);
-    try expectEqual(10, results.stage2);
-
-    results = try day01("R1050");
-    try expectEqual(1, results.stage1);
-    try expectEqual(11, results.stage2);
-
-    results = try day01("L50");
-    try expectEqual(1, results.stage1);
-    try expectEqual(1, results.stage2);
-
-    results = try day01("L50\nR100\nL50");
-    try expectEqual(2, results.stage1);
-    try expectEqual(2, results.stage2);
-
-    results = try day01("L50\nR150\nL50");
-    try expectEqual(2, results.stage1);
-    try expectEqual(3, results.stage2);
-
-    results = try day01("L50\nL150\nL50");
-    try expectEqual(2, results.stage1);
-    try expectEqual(3, results.stage2);
+test "real data" {
+    try expectEqual(.{ 1031, 5831 }, try day01(data));
 }

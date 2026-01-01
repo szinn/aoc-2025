@@ -9,7 +9,7 @@ const util = @import("util.zig");
 const gpa = util.gpa;
 
 const data = @embedFile("data/day02.txt");
-const data_sample = "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124";
+const sampleData = "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124";
 
 // Useful stdlib functions
 const tokenizeAny = std.mem.tokenizeAny;
@@ -46,7 +46,7 @@ pub fn main() !void {
     print("Answer is {}\n", .{result});
 }
 
-fn day02(input: []const u8) !struct { stage1: usize, stage2: usize } {
+fn day02(input: []const u8) !struct { usize, usize } {
     var rangeIterator = tokenizeSeq(u8, input, ",");
 
     var sum_stage1: usize = 0;
@@ -62,7 +62,7 @@ fn day02(input: []const u8) !struct { stage1: usize, stage2: usize } {
         }
     }
 
-    return .{ .stage1 = sum_stage1, .stage2 = sum_stage2 };
+    return .{ sum_stage1, sum_stage2 };
 }
 
 fn sumInvalidStageIds(lower: usize, upper: usize, comptime isValidId: fn (usize) bool) usize {
@@ -113,9 +113,11 @@ fn isValidStage2Id(value: usize) bool {
 }
 
 test "example data" {
-    const result = try day02(data_sample);
+    try expectEqual(.{ 1227775554, 4174379265 }, try day02(sampleData));
+}
 
-    try expectEqual(1227775554, result.stage1);
+test "real data" {
+    try expectEqual(.{ 28146997880, 40028128307 }, try day02(data));
 }
 
 test "check valid stage1" {

@@ -9,6 +9,12 @@ const util = @import("util.zig");
 const gpa = util.gpa;
 
 const data = @embedFile("data/day03.txt");
+const sampleData =
+    \\987654321111111
+    \\811111111111119
+    \\234234234234278
+    \\818181911112111
+;
 
 // Useful stdlib functions
 const tokenizeAny = std.mem.tokenizeAny;
@@ -45,7 +51,7 @@ pub fn main() !void {
     print("Answer is {}\n", .{results});
 }
 
-fn day03(input: []const u8) !struct { stage1: usize, stage2: usize } {
+fn day03(input: []const u8) !struct { usize, usize } {
     var lineIterator = tokenizeSeq(u8, input, "\n");
 
     var sumStage1: usize = 0;
@@ -55,7 +61,7 @@ fn day03(input: []const u8) !struct { stage1: usize, stage2: usize } {
         sumStage2 += computeJoltage(line, 12);
     }
 
-    return .{ .stage1 = sumStage1, .stage2 = sumStage2 };
+    return .{ sumStage1, sumStage2 };
 }
 
 fn computeJoltage(battery: []const u8, comptime count: usize) usize {
@@ -95,4 +101,12 @@ test "compute joltage" {
     try expectEqual(811111111119, computeJoltage("811111111111119", 12));
     try expectEqual(434234234278, computeJoltage("234234234234278", 12));
     try expectEqual(888911112111, computeJoltage("818181911112111", 12));
+}
+
+test "example data" {
+    try expectEqual(.{ 357, 3121910778619 }, try day03(sampleData));
+}
+
+test "real data" {
+    try expectEqual(.{ 17408, 172740584266849 }, try day03(data));
 }

@@ -16,7 +16,7 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
 const data = @embedFile("data/day08.txt");
-const dataSample =
+const sampleData =
     \\162,817,812
     \\57,618,57
     \\906,360,560
@@ -174,5 +174,11 @@ fn joinClosestPair(pairs: *List(Pair), circuits: *Circuits, pointsToCircuitMap: 
 test "Sample data" {
     const allocator = std.testing.allocator;
 
-    try expectEqual(.{ 40, 25272 }, day08(allocator, dataSample, 10));
+    try expectEqual(.{ 40, 25272 }, day08(allocator, sampleData, 10));
+}
+
+test "real data" {
+    const allocator = std.testing.allocator;
+
+    try expectEqual(.{ 52668, 1474050600 }, try day08(allocator, data, 1000));
 }

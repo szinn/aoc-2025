@@ -9,7 +9,7 @@ const util = @import("util.zig");
 const gpa = util.gpa;
 
 const data = @embedFile("data/day05.txt");
-const dataSample =
+const sampleData =
     \\3-5
     \\10-20
     \\10-14
@@ -140,5 +140,9 @@ fn cmpByLower(_: void, a: Range, b: Range) bool {
 }
 
 test "Sample data" {
-    try expectEqual(.{ 3, 14 }, try day05(dataSample));
+    try expectEqual(.{ 3, 14 }, try day05(sampleData));
+}
+
+test "real data" {
+    try expectEqual(.{ 758, 343143696885053 }, try day05(data));
 }

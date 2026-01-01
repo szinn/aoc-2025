@@ -9,7 +9,7 @@ const util = @import("util.zig");
 const gpa = util.gpa;
 
 const data = @embedFile("data/day06.txt");
-const dataSample =
+const sampleData =
     \\123 328  51 64 
     \\ 45 64  387 23 
     \\  6 98  215 314
@@ -154,5 +154,9 @@ fn identity(operation: Operation) usize {
 }
 
 test "Sample data" {
-    try expectEqual(.{ 4277556, 3263827 }, day06(dataSample));
+    try expectEqual(.{ 4277556, 3263827 }, day06(sampleData));
+}
+
+test "real data" {
+    try expectEqual(.{ 4449991244405, 9348430857627 }, try day06(data));
 }

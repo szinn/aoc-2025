@@ -9,7 +9,7 @@ const util = @import("util.zig");
 const gpa = util.gpa;
 
 const data = @embedFile("data/day04.txt");
-const dataSample =
+const sampleData =
     \\..@@.@@@@.
     \\@@@.@.@.@@
     \\@@@@@.@.@@
@@ -147,5 +147,9 @@ fn neighbours(row: i32, column: i32) [8]struct { i32, i32 } {
 }
 
 test "Sample data" {
-    try expectEqual(.{ 13, 43 }, try day04(dataSample));
+    try expectEqual(.{ 13, 43 }, try day04(sampleData));
+}
+
+test "real data" {
+    try expectEqual(.{ 1553, 8442 }, try day04(data));
 }

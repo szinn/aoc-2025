@@ -103,7 +103,7 @@ fn day09(allocator: Allocator, input: []const u8) !struct { usize, usize } {
     const areaStage1 = areas.items[0].area;
     var areaStage2: usize = undefined;
 
-    outer: for (areas.items, 0..) |area, j| {
+    outer: for (areas.items) |area| {
         for (0..points.items.len - 1) |i| {
             const line: Line = .init(points.items[i], points.items[i + 1]);
             if (line.isHorizontal()) {
@@ -118,7 +118,6 @@ fn day09(allocator: Allocator, input: []const u8) !struct { usize, usize } {
                 continue :outer;
             }
         }
-        print("Stage 2 answer is candidate #{} - {}\n", .{ j, area });
         areaStage2 = area.area;
         break;
     }
@@ -163,4 +162,10 @@ test "Sample data" {
     const allocator = std.testing.allocator;
 
     try expectEqual(.{ 50, 24 }, try day09(allocator, sampleData));
+}
+
+test "real data" {
+    const allocator = std.testing.allocator;
+
+    try expectEqual(.{ 4740155680, 1543501936 }, try day09(allocator, data));
 }
