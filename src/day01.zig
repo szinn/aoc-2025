@@ -1,13 +1,47 @@
 const std = @import("std");
-
 const Allocator = std.mem.Allocator;
-const HashMap = std.array_hash_map.AutoArrayHashMap;
-const List = std.array_list.Managed;
+const List = std.ArrayList;
+const Map = std.AutoHashMap;
+const StrMap = std.StringHashMap;
+const BitSet = std.DynamicBitSet;
+
+const data = @embedFile("data/day01.txt");
+const sampleData =
+    \\L68
+    \\L30
+    \\R48
+    \\L5
+    \\R60
+    \\L55
+    \\L1
+    \\L99
+    \\R14
+    \\L82
+;
+
+// Useful stdlib functions
+const tokenizeAny = std.mem.tokenizeAny;
+const tokenizeSeq = std.mem.tokenizeSequence;
+const tokenizeSca = std.mem.tokenizeScalar;
+const splitAny = std.mem.splitAny;
+const splitSeq = std.mem.splitSequence;
+const splitSca = std.mem.splitScalar;
+const indexOf = std.mem.indexOfScalar;
+const indexOfAny = std.mem.indexOfAny;
+const indexOfStr = std.mem.indexOfPosLinear;
+const lastIndexOf = std.mem.lastIndexOfScalar;
+const lastIndexOfAny = std.mem.lastIndexOfAny;
+const lastIndexOfStr = std.mem.lastIndexOfLinear;
+const trim = std.mem.trim;
+const sliceMin = std.mem.min;
+const sliceMax = std.mem.max;
+
+const parseInt = std.fmt.parseInt;
+const parseFloat = std.fmt.parseFloat;
 
 const print = std.debug.print;
 const assert = std.debug.assert;
-const splitScalar = std.mem.splitScalar;
-const parseInt = std.fmt.parseInt;
+
 const sort = std.sort.block;
 const asc = std.sort.asc;
 const desc = std.sort.desc;
@@ -15,34 +49,44 @@ const desc = std.sort.desc;
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
-const data = @embedFile("data/day01.txt");
-const sampleData =
-    \\
-;
+pub fn main() !void {
+    const results = try day01(data);
+    print("Answer is {}\n", .{results});
+}
 
-// pub fn main() !void {
-//     var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
-//     defer assert(debugAllocator.deinit() == .ok);
-//
-//     const result = try day01(debugAllocator.allocator(), data);
-//
-//     print("Result = {}\n", .{result});
-// }
-//
-// fn day01(allocator: Allocator, input: []const u8) !struct {} {
-//     var arenaAllocator: std.heap.ArenaAllocator = .init(allocator);
-//     defer arenaAllocator.deinit();
-//     const arena = arenaAllocator.allocator();
-//
-//     return .{};
-// }
-//
-// test "Sample data" {
-//     const allocator = std.testing.allocator;
-//
-//     try expectEqual(.{}, try day01(allocator, sampleData));
-// }
+fn day01(input: []const u8) !struct { usize, usize } {
+    var lineIterator = tokenizeSeq(u8, input, "\n");
 
-// Generated from template/template.zig.
-// Run `zig build generate` to update.
-// Only unmodified days will be updated.
+    var dial: isize = 50;
+    var counterStage1: usize = 0;
+    var counterStage2: usize = 0;
+
+    while (lineIterator.next()) |line| {
+        const clicks = switch (line[0]) {
+            'L' => -try parseInt(isize, line[1..], 10),
+            'R' => try parseInt(isize, line[1..], 10),
+            else => return error.InvalidCharacter,
+        };
+        counterStage2 += @abs(@divFloor(dial + clicks, 100));
+        if (dial == 0 and clicks < 0) {
+            counterStage2 -= 1;
+        }
+        dial = @mod(dial + clicks, 100);
+        if (dial == 0) {
+            counterStage1 += 1;
+        }
+        if (dial == 0 and clicks < 0) {
+            counterStage2 += 1;
+        }
+    }
+
+    return .{ counterStage1, counterStage2 };
+}
+
+test "example data" {
+    try expectEqual(.{ 3, 6 }, try day01(sampleData));
+}
+
+test "real data" {
+    try expectEqual(.{ 1031, 5831 }, try day01(data));
+}
